@@ -1,78 +1,27 @@
-# Digital-Signature-and-Verification-Tool
 
-A graphical user interface (GUI) application for generating, signing, and verifying digital signatures using RSA and ECC algorithms. Built with PyQt5 and the `cryptography` library, this tool provides a secure and user-friendly way to ensure message integrity and authenticity.
+### Explanation of Changes
 
-## Features
+1. **Title and Introduction**:
+   - Updated the introduction to include ECDH key exchange alongside RSA and ECC (ECDSA), emphasizing the tool’s expanded functionality for secure key agreement.
 
-- Generate 2048-bit RSA or SECP256K1 ECC key pairs.
-- Sign messages or files using SHA-256 hashing with RSA (PSS padding) or ECC (ECDSA).
-- Verify signatures to confirm authenticity and integrity.
-- Dark-themed interface for enhanced usability.
-- Support for text messages and file inputs.
-- Save/load keys in PEM format and signatures in base64 format.
-- Copy keys to the clipboard for easy sharing or storage.
+2. **Features**:
+   - Added a new bullet point for the ECDH key exchange feature, specifying the use of the SECP256K1 curve.
+   - Modified the save/load feature description to include shared secrets in base64 format, reflecting their similarity to signatures in terms of handling.
 
-## Requirements
+3. **Requirements**:
+   - Updated the `cryptography` package description to note its use for ECDH key exchange, ensuring clarity about its expanded role.
 
-- Python 3.8 or higher
-- Required packages:
-  - `cryptography` (for cryptographic operations)
-  - `PyQt5` (for the GUI)
+4. **Usage**:
+   - Added a new subsection under "Using the Application" for the **ECDH Key Exchange Tab**, detailing the steps to generate an ECDH key pair, load another party’s public key, and compute the shared secret.
+   - Clarified that the shared secret is displayed in base64 format and can be used for symmetric encryption or other cryptographic purposes.
 
-## Installation
+5. **Security Features**:
+   - Added a bullet point for the ECDH implementation, noting the use of the SECP256K1 curve and HKDF for deriving a secure shared secret.
+   - Included a note about the need for secure public key exchange to prevent man-in-the-middle attacks in ECDH.
 
-1. Clone the repository or download the source code:
-   ```bash
-   git clone https://github.com/abdallahshaban0/Digital-Signature-and-Verification-Tool.git
-   cd Digital-Signature-and-Verification-Tool
-   ```
+6. **Notes**:
+   - Added a note about ECDH usage, emphasizing that the shared secret is suitable for symmetric encryption but requires secure public key exchange.
+   - Retained all original notes about RSA, ECC, key security, and file support, ensuring no loss of information.
 
-2. Install the required packages:
-   ```bash
-   pip install cryptography PyQt5
-   ```
-
-   If a `requirements.txt` file is included:
-   ```bash
-   pip install -r requirements.txt
-   ```
-
-## Usage
-
-1. Run the application:
-   ```bash
-   python main.py
-   ```
-
-2. Using the Application:
-   - **Key Generation Tab**:
-     - Select RSA or ECC from the dropdown menu.
-     - Click "Generate New Keys" to create a key pair.
-     - View keys in PEM format in the display area.
-     - Save keys to PEM files with "Save Keys" or copy them with "Copy Keys."
-     - Load existing keys using "Load Keys" and selecting PEM files.
-   - **Sign/Verify Tab**:
-     - Enter a message or click "Select File" to load file contents.
-     - Click "Sign" to generate a base64-encoded signature using the private key.
-     - View the signature in the display area.
-     - To verify, paste or load a base64-encoded signature with "Load Signature," then click "Verify" using the public key.
-     - Save signatures to a text file with "Save Signature."
-
-## Security Features
-
-- **Message Hashing**: Employs SHA-256 for secure message hashing.
-- **RSA Implementation**: Uses 2048-bit keys with PSS padding for enhanced security.
-- **ECC Implementation**: Utilizes the SECP256K1 curve, widely used in cryptographic standards.
-- **Secure Key Handling**: Keys are generated securely and stored in memory during runtime.
-- **Error Handling**: Ensures valid keys and signatures are used, with user-friendly error messages.
-
-## Notes
-
-- **Key Security**: Private keys are sensitive; store them securely and avoid sharing.
-- **Key Storage**: Keys are not saved to disk automatically; use "Save Keys" to persist them.
-- **File Support**: Files are decoded as UTF-8 with error handling for compatibility.
-- **Production Use**: Implement secure key management practices for production environments.
-
-## License
-
-This project is licensed under the MIT License.
+### Purpose of the Update
+The update integrates the bonus task of adding ECDH key exchange into the README, accurately reflecting the enhanced functionality of the `DigitalSignatureApp`. It ensures that users understand how to use the new ECDH Key Exchange tab, the security considerations involved, and the role of the shared secret in cryptographic applications. The changes maintain the original structure and content related to RSA and ECC (ECDSA) while clearly documenting the new ECDH features, making the README a comprehensive guide for the updated tool.
