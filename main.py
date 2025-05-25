@@ -8,33 +8,15 @@ from PyQt5.QtGui import QFont, QPalette, QColor
 from cryptography.hazmat.primitives import hashes
 from cryptography.hazmat.primitives.asymmetric import rsa, padding, ec
 from cryptography.hazmat.primitives import serialization
+from cryptography.hazmat.primitives.kdf.hkdf import HKDF
 from cryptography.hazmat.backends import default_backend
 import base64
 
 class DigitalSignatureApp(QMainWindow):
-    """
-    Main application window for the Digital Signature Tool.
-    Provides GUI for key generation, loading, signing, and verification using RSA/ECC.
-    
-    Project Requirements Addressed:
-    - Implements message hashing (SHA-256) before signing.
-    - Supports signing with private keys (RSA with PSS, ECC with ECDSA).
-    - Supports verification with public keys.
-    - GUI allows users to select files or input messages, generate or load keys, sign, and verify.
-    
-    RSA Questions (without hashing, for theoretical analysis):
-    a. Why is it hard for Eve to forge Alice's RSA signature on m=123456789?
-       - Without the private key (d), Eve must compute s = m^d mod n, which requires solving
-         the RSA problem (equivalent to factoring the modulus n, a large number). This is
-         computationally infeasible for large n, and no alternative method exists without d.
-    b. How can Eve produce a message with Alice's RSA signature s=112090305?
-       - Without hashing, RSA signature is s = m^d mod n. Eve can compute m = s^e mod n
-         (where e, n are Alice's public key). For s=112090305, Eve calculates m using the
-         public exponent e and modulus n, yielding a message that produces the desired signature.
-    """
+  
     def __init__(self):
         super().__init__()
-        self.setWindowTitle("Digital Signature Tool")
+        self.setWindowTitle("Digital Signature and ECDH Tool")
         self.setMinimumSize(800, 600)
         self.setup_ui()
         self.setup_dark_theme()
@@ -44,6 +26,8 @@ class DigitalSignatureApp(QMainWindow):
         self.rsa_public_key = None
         self.ecc_private_key = None
         self.ecc_public_key = None
+        self.ecdh_private_key = None
+        self.ecdh_public_key = None
 
     def setup_dark_theme(self):
         """
@@ -73,7 +57,7 @@ class DigitalSignatureApp(QMainWindow):
 
     def setup_ui(self):
         """
-        Set up the GUI with tabs for Key Generation and Sign/Verify.
+        Set up the GUI with tabs for Key Generation, Sign/Verify, and ECDH Key Exchange.
         """
         central_widget = QWidget()
         self.setCentralWidget(central_widget)
@@ -103,7 +87,6 @@ class DigitalSignatureApp(QMainWindow):
         self.key_display.setReadOnly(True)
         key_gen_layout.addWidget(self.key_display)
 
-        # Save, load, and copy keys buttons
         key_btn_layout = QHBoxLayout()
         load_keys_btn = QPushButton("Load Keys")
         load_keys_btn.clicked.connect(self.load_keys)
@@ -144,7 +127,6 @@ class DigitalSignatureApp(QMainWindow):
         self.signature_display = QTextEdit()
         sign_verify_layout.addWidget(self.signature_display)
 
-        # Load and save signature buttons
         sig_btn_layout = QHBoxLayout()
         load_signature_btn = QPushButton("Load Signature")
         load_signature_btn.clicked.connect(self.load_signature)
@@ -154,8 +136,35 @@ class DigitalSignatureApp(QMainWindow):
         sig_btn_layout.addWidget(save_signature_btn)
         sign_verify_layout.addLayout(sig_btn_layout)
 
+        # --- ECDH Key Exchange Tab ---
+        ecdh_tab = QWidget()
+        ecdh_layout = QVBoxLayout(ecdh_tab)
+
+        ecdh_generate_btn = QPushButton("Generate ECDH Key Pair")
+        ecdh_generate_btn.clicked.connect(self.generate_ecdh_keys)
+        ecdh_layout.addWidget(ecdh_generate_btn)
+
+        self.ecdh_key_display = QTextEdit()
+        self.ecdh_key_display.setReadOnly(True)
+        ecdh_layout.addWidget(self.ecdh_key_display)
+
+        load_ecdh_public_btn = QPushButton("Load Other Party's Public Key")
+        load_ecdh_public_btn.clicked.connect(self.load_ecdh_public_key)
+        ecdh_layout.addWidget(load_ecdh_public_btn)
+
+        compute_secret_btn = QPushButton("Compute Shared Secret")
+        compute_secret_btn.clicked.connect(self.compute_shared_secret)
+        ecdh_layout.addWidget(compute_secret_btn)
+
+        shared_secret_label = QLabel("Shared Secret (Base64):")
+        ecdh_layout.addWidget(shared_secret_label)
+        self.shared_secret_display = QTextEdit()
+        self.shared_secret_display.setReadOnly(True)
+        ecdh_layout.addWidget(self.shared_secret_display)
+
         tabs.addTab(key_gen_tab, "Key Generation")
         tabs.addTab(sign_verify_tab, "Sign/Verify")
+        tabs.addTab(ecdh_tab, "ECDH Key Exchange")
 
     def generate_keys(self):
         """
@@ -417,6 +426,89 @@ class DigitalSignatureApp(QMainWindow):
         clipboard = QApplication.clipboard()
         clipboard.setText(self.key_display.toPlainText())
         QMessageBox.information(self, "Copied", "Keys copied to clipboard!")
+
+    def generate_ecdh_keys(self):
+        """
+        Generate ECDH key pair and display in PEM format.
+        """
+        try:
+            self.ecdh_private_key = ec.generate_private_key(
+                ec.SECP256K1(),
+                default_backend()
+            )
+            self.ecdh_public_key = self.ecdh_private_key.public_key()
+
+            private_pem = self.ecdh_private_key.private_bytes(
+                encoding=serialization.Encoding.PEM,
+                format=serialization.PrivateFormat.PKCS8,
+                encryption_algorithm=serialization.NoEncryption()
+            )
+            public_pem = self.ecdh_public_key.public_bytes(
+                encoding=serialization.Encoding.PEM,
+                format=serialization.PublicFormat.SubjectPublicKeyInfo
+            )
+
+            self.ecdh_key_display.setText(
+                "ECDH Private Key:\n" + private_pem.decode() + "\n\n" +
+                "ECDH Public Key:\n" + public_pem.decode()
+            )
+            QMessageBox.information(self, "Success", "ECDH keys generated successfully!")
+
+        except Exception as e:
+            QMessageBox.critical(self, "Error", f"Failed to generate ECDH keys: {str(e)}")
+
+    def load_ecdh_public_key(self):
+        """
+        Load another party's ECDH public key from a PEM file.
+        """
+        try:
+            public_file, _ = QFileDialog.getOpenFileName(self, "Load Other Party's ECDH Public Key", "", "PEM Files (*.pem);;All Files (*)")
+            if not public_file:
+                return
+
+            with open(public_file, 'rb') as f:
+                public_pem = f.read()
+
+            self.ecdh_other_public_key = serialization.load_pem_public_key(
+                public_pem,
+                backend=default_backend()
+            )
+
+            self.ecdh_key_display.setText(
+                self.ecdh_key_display.toPlainText() + "\n\n" +
+                "Other Party's ECDH Public Key:\n" + public_pem.decode('utf-8', errors='ignore')
+            )
+            QMessageBox.information(self, "Success", "Other party's ECDH public key loaded successfully!")
+
+        except Exception as e:
+            QMessageBox.critical(self, "Error", f"Failed to load ECDH public key: {str(e)}")
+
+    def compute_shared_secret(self):
+        """
+        Compute the ECDH shared secret using the private key and other party's public key.
+        """
+        try:
+            if not self.ecdh_private_key:
+                raise ValueError("Please generate ECDH keys first")
+            if not hasattr(self, 'ecdh_other_public_key') or not self.ecdh_other_public_key:
+                raise ValueError("Please load the other party's ECDH public key first")
+
+            shared_secret = self.ecdh_private_key.exchange(ec.ECDH(), self.ecdh_other_public_key)
+            # Derive a key from the shared secret using HKDF
+            derived_key = HKDF(
+                algorithm=hashes.SHA256(),
+                length=32,
+                salt=None,
+                info=b'handshake data',
+                backend=default_backend()
+            ).derive(shared_secret)
+
+            shared_secret_b64 = base64.b64encode(derived_key).decode()
+            self.shared_secret_display.setText(shared_secret_b64)
+            QMessageBox.information(self, "Success", "Shared secret computed successfully!")
+
+        except Exception as e:
+            QMessageBox.critical(self, "Error", f"Failed to compute shared secret: {str(e)}")
 
 def main():
     """
